@@ -192,10 +192,11 @@ const canon=o=>JSON.stringify(o,(k,v)=>v&&typeof v==='object'&&!Array.isArray(v)
 /* ---------- dados ---------- */
 const def={vendedores:['Vendedor 1','Vendedor 2'],peixes:[{n:'Tilápia',p:25},{n:'Salmão',p:69.9},{n:'Camarão',p:59.9},{n:'Sardinha',p:18},{n:'Pescada',p:32}],upd:hoje()};
 let db;try{db=JSON.parse(localStorage.getItem(KEY))||def}catch(e){db=def}
+const ordC=()=>{const ix=c=>{const i=db.cats.findIndex(x=>x.id===c);return i<0?999:i};db.peixes.sort((a,b)=>ix(a.c)-ix(b.c))};
 const norm0=()=>{db.vendas=db.vendas||[];db.mov=db.mov||[];
 db.cats=db.cats||['Balcão','Camarão','Filés','Importados','Preparado','Moluscos','Gelo','Condimentos'].map((n,i)=>({id:'c'+(i+1),n}));
 db.peixes.forEach((f,i)=>{if(f.c===undefined)f.c='';if(!f.u)f.u='kg';if(!f.id)f.id='p'+Date.now().toString(36)+i;if(f.e===undefined)f.e=null;
-  if(f.e!=null&&!db.mov.some(m=>m.pid===f.id))db.mov.push({d:ontem(),pid:f.id,q:f.e})})};
+  if(f.e!=null&&!db.mov.some(m=>m.pid===f.id))db.mov.push({d:ontem(),pid:f.id,q:f.e})});ordC()};
 norm0();
 
 /* ---------- servidor único (db do Claude) + cópia neste aparelho ---------- */
@@ -399,7 +400,7 @@ function act(a,d){const i=+d.i;
    else{const n=r3(qtd(f,num(t)));mov(f,n-(f.e||0));f.e=n}save()}
  else if(a==='cat'){cat=d.c;q=''}
  else if(a==='addc'){db.cats.push({id:'c'+Date.now(),n:'Nova categoria'});save()}
- else if(a==='delc'){const c=db.cats[i];db.peixes.forEach(f=>{if(f.c===c.id)f.c=''});if(cat===c.id)cat='todos';db.cats.splice(i,1);save()}
+ else if(a==='delc'){const c=db.cats[i];db.peixes.forEach(f=>{if(f.c===c.id)f.c=''});if(cat===c.id)cat='todos';db.cats.splice(i,1);ordC();save()}
  else if(a==='pagar'){if(!(carts[si]||[]).length)return;fin([{k:d.p,v:total()}])}
  else if(a==='split'){if(!(carts[si]||[]).length)return;splitOpen();return}
  else if(a==='scancel'){$('dlg2').close();return}
@@ -423,7 +424,7 @@ function dragTarget(x,y){let t=null;document.querySelectorAll('#grid .fish').for
 document.addEventListener('pointerdown',e=>{if(!ordem||!unlocked)return;const b=e.target.closest&&e.target.closest('#grid .fish');if(!b)return;e.preventDefault();drag={i:+b.dataset.i,el:b,x:e.clientX,y:e.clientY,over:null};b.classList.add('lift')});
 document.addEventListener('pointermove',e=>{if(!drag)return;e.preventDefault();drag.el.style.transform='translate('+(e.clientX-drag.x)+'px,'+(e.clientY-drag.y)+'px)';const t=dragTarget(e.clientX,e.clientY);if(t!==drag.over){if(drag.over)drag.over.classList.remove('over');if(t)t.classList.add('over');drag.over=t}});
 const dragEnd=e=>{if(!drag)return;const d=drag,t=e.type==='pointerup'?dragTarget(e.clientX,e.clientY):null;drag=null;
-  if(t){const tf=db.peixes[+t.dataset.i],from=d.i,to=db.peixes.indexOf(tf);if(tf&&from!==to){const[m]=db.peixes.splice(from,1),ti=db.peixes.indexOf(tf);db.peixes.splice(from<to?ti+1:ti,0,m);save()}}
+  if(t){const tf=db.peixes[+t.dataset.i],from=d.i,to=db.peixes.indexOf(tf);if(tf&&from!==to){const[m]=db.peixes.splice(from,1),ti=db.peixes.indexOf(tf);db.peixes.splice(from<to?ti+1:ti,0,m);ordC();save()}}
   const g=$('grid');if(g)g.innerHTML=fishGrid()};
 document.addEventListener('pointerup',dragEnd);document.addEventListener('pointercancel',dragEnd);
 
@@ -436,7 +437,7 @@ document.addEventListener('input',e=>{const t=e.target,k=t.dataset.k;
  if(k==='n')db.peixes[i].n=t.value;
  else if(k==='p'){db.peixes[i].p=num(t.value);db.upd=hoje()}
  else if(k==='v')db.vendedores[i]=t.value;
- else if(k==='c')db.peixes[i].c=t.value;
+ else if(k==='c'){db.peixes[i].c=t.value;ordC();save();const y=scrollY;render();scrollTo(0,y);return}
  else if(k==='u')db.peixes[i].u=t.value;
  else if(k==='cn')db.cats[i].n=t.value;
  saveL()});
